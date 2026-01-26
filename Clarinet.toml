@@ -1,0 +1,33 @@
+[project]
+name = 'test-v4'
+description = ''
+authors = []
+telemetry = true
+cache_dir = '.\.cache'
+
+[[project.requirements]]
+contract_id = 'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2'
+
+[[project.requirements]]
+contract_id = 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard'
+[contracts.quest-test]
+path = 'contracts/quest-test.clar'
+clarity_version = 3
+epoch = "latest"
+
+[contracts.treasury]
+path = 'contracts/treasury.clar'
+clarity_version = 3
+epoch = 'latest'
+[repl.analysis]
+passes = ['check_checker']
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
+
+[repl.remote_data]
+enabled = false
+api_url = 'https://api.hiro.so'
