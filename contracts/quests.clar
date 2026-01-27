@@ -132,7 +132,13 @@
           ;; Refund locked STX to participant
           (asserts! (is-eq (contract-of use-token) (get token-used quest)) ERR_WRONG_TOKEN)
           (try! (as-contract? ((with-ft (contract-of use-token) "*" (get locked-amount participant)))
-              (try! (contract-call? use-token transfer (get locked-amount participant) tx-sender (get participant participant-key) none))
+            (begin
+              (try! (restrict-assets? tx-sender
+                ((with-ft (contract-of use-token) "*" (get locked-amount participant)))
+                (try! (contract-call? use-token transfer (get locked-amount participant) tx-sender (get participant participant-key) none))
+              ))
+              true
+            )
           ))
           ;; Update participant: mark activities as complete and unlock amount
           (ok (map-set participants participant-key (merge participant { 
@@ -175,7 +181,13 @@
     (asserts! (is-eq (contract-of use-token) (get token-used quest)) ERR_WRONG_TOKEN)
     (asserts! (get amount-locked participant) ERR_AMOUNT_NOT_LOCKED)
     (try! (as-contract? ((with-ft (contract-of use-token) "*" (get locked-amount participant)))
+      (begin
+        (try! (restrict-assets? tx-sender
+          ((with-ft (contract-of use-token) "*" (get locked-amount participant)))
           (try! (contract-call? use-token transfer (get locked-amount participant)  tx-sender (get participant participant-key) none))
+        ))
+        true
+      )
     ))
     (ok (map-set participants participant-key (merge participant { amount-locked: false })))
   )

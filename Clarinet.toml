@@ -12,15 +12,27 @@ contract_id = 'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v
 contract_id = 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard'
 [contracts.quest-test]
 path = 'contracts/quest-test.clar'
-clarity_version = 3
-epoch = "latest"
+clarity_version = 4
+epoch = '3.3'
+
+[contracts.quests]
+path = 'contracts/quests.clar'
+clarity_version = 4
+epoch = 'latest'
 
 [contracts.treasury]
 path = 'contracts/treasury.clar'
 clarity_version = 3
 epoch = 'latest'
 [repl.analysis]
-passes = ['check_checker']
+passes = [
+    'call_checker',
+    'check_checker',
+]
+
+[repl.analysis.lint_groups]
+
+[repl.analysis.lints]
 
 [repl.analysis.check_checker]
 strict = false
