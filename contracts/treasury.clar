@@ -35,8 +35,11 @@
   (let ((current-balance (default-to u0 (map-get? token-balances (contract-of token-contract)))))
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     (asserts! (is-token-enabled (contract-of token-contract)) ERR_WRONG_TOKEN)
-    (try! (contract-call? token-contract transfer amount sender (as-contract tx-sender)
-      none
+    (try! (restrict-assets? sender
+      ((with-ft (contract-of token-contract) "*" amount) (with-stx amount))
+      (try! (contract-call? token-contract transfer amount sender (unwrap! (as-contract? () tx-sender) ERR_UNAUTHORIZED)
+        none
+      ))
     ))
     (ok (map-set token-balances (contract-of token-contract)
       (+ current-balance amount)
@@ -55,13 +58,14 @@
       (token-principal (contract-of token-contract))
       (current-balance (default-to u0 (map-get? token-balances token-principal)))
     )
-    (asserts! (is-eq contract-caller (as-contract .quests)) ERR_UNAUTHORIZED)
+    (asserts! (is-eq contract-caller (unwrap! (as-contract? () .quests) ERR_UNAUTHORIZED)) ERR_UNAUTHORIZED)
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     (asserts! (>= current-balance amount) ERR_INSUFFICIENT_BALANCE)
     (asserts! (is-token-enabled token-principal) ERR_WRONG_TOKEN)
-    ;; Transfer tokens from contract to recipient
-    (as-contract (try! (contract-call? token-contract transfer amount tx-sender recipient none)))
-
+    ;; Transfer tokens from contract to recipient with asset restriction
+    (try! (as-contract? ((with-ft token-principal "*" amount) (with-stx amount))
+        (try! (contract-call? token-contract transfer amount tx-sender recipient none))
+    ))
     ;; Update balance
     (ok (map-set token-balances token-principal (- current-balance amount)))
   )
@@ -97,11 +101,14 @@
         (token-principal (contract-of token-contract))
       )
       (asserts! (is-token-enabled token-principal) ERR_WRONG_TOKEN)
-      (as-contract (unwrap!
-        (contract-call? token-contract transfer amount (as-contract tx-sender)
-          winner none
+      (try! (as-contract? ((with-ft token-principal "*" amount) (with-stx amount))
+        (begin
+          (unwrap!
+            (contract-call? token-contract transfer amount tx-sender winner none)
+            (err (+ ERR_TRANSFER_INDEX_PREFIX index))
+          )
+          true
         )
-        (err (+ ERR_TRANSFER_INDEX_PREFIX index))
       ))
       (ok {
         index: (+ index u1),
@@ -148,9 +155,11 @@
           )
             transfer-result (begin
               ;; Update balance after all transfers
-              (as-contract (try! (contract-call? token-contract transfer fee tx-sender
-                (var-get treasury-owner) none
-              )))
+              (try! (as-contract? ((with-ft token-principal "*" fee) (with-stx fee))
+                  (try! (contract-call? token-contract transfer fee tx-sender
+                    (var-get treasury-owner) none
+                  ))
+              ))
               (map-set token-balances token-principal (- balance balance))
               (ok {
                 token-index: (+ token-index u1),
@@ -199,7 +208,7 @@
 
 (define-private (is-token-enabled (token-id principal))
   (contract-call?
-    'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2
+    'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v1
     is-token-enabled token-id
   )
 )

@@ -10,6 +10,20 @@ contract_id = 'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v
 
 [[project.requirements]]
 contract_id = 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard'
+
+[[project.requirements]]
+contract_id = 'SP32AEEF6WW5Y0NMJ1S8SBSZDAY8R5J32NBZFPKKZ.wstx'
+
+[[project.requirements]]
+contract_id = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token'
+
+[[project.requirements]]
+contract_id = 'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v1'
+[contracts.helper-contract]
+path = 'contracts/helper-contract.clar'
+clarity_version = 4
+epoch = 'latest'
+
 [contracts.quest-test]
 path = 'contracts/quest-test.clar'
 clarity_version = 4
@@ -22,7 +36,7 @@ epoch = 'latest'
 
 [contracts.treasury]
 path = 'contracts/treasury.clar'
-clarity_version = 3
+clarity_version = 4
 epoch = 'latest'
 [repl.analysis]
 passes = [

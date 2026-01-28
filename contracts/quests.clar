@@ -80,7 +80,7 @@
       (asserts! (is-token-enabled (contract-of use-token)) ERR_WRONG_TOKEN)
       (asserts! (verify-treasury-contract) ERR_INVALID_TREASURY_CONTRACT)
       (try! (restrict-assets? tx-sender 
-        ((with-ft (contract-of use-token) "*" commitment-amount))
+        ((with-ft (contract-of use-token) "*" commitment-amount) (with-stx commitment-amount))
         (try! (contract-call? .treasury deposit commitment-amount tx-sender use-token))
       ))
       (asserts! (map-insert quests quest-id quest-data) ERR_INVALID_QUEST)
@@ -100,7 +100,7 @@
       (asserts! (> participation-amount u0) ERR_INVALID_PARTICIPATION_AMOUNT)
       (asserts! (is-none (map-get? participants participant-key)) ERR_ALREADY_PARTICIPATING)
       (try! (restrict-assets? tx-sender
-        ((with-ft (contract-of use-token) "*" participation-amount))
+        ((with-ft (contract-of use-token) "*" participation-amount) (with-stx participation-amount))
         (try! (contract-call? use-token transfer participation-amount tx-sender (unwrap! (as-contract? () tx-sender) ERR_UNAUTHORIZED) none))
       ))
       (asserts! (map-insert participants participant-key {
@@ -131,10 +131,10 @@
         (begin
           ;; Refund locked STX to participant
           (asserts! (is-eq (contract-of use-token) (get token-used quest)) ERR_WRONG_TOKEN)
-          (try! (as-contract? ((with-ft (contract-of use-token) "*" (get locked-amount participant)))
+          (try! (as-contract? ((with-ft (contract-of use-token) "*" (get locked-amount participant)) (with-stx (get locked-amount participant)))
             (begin
               (try! (restrict-assets? tx-sender
-                ((with-ft (contract-of use-token) "*" (get locked-amount participant)))
+                ((with-ft (contract-of use-token) "*" (get locked-amount participant)) (with-stx (get locked-amount participant)))
                 (try! (contract-call? use-token transfer (get locked-amount participant) tx-sender (get participant participant-key) none))
               ))
               true
@@ -180,10 +180,10 @@
     (asserts! (is-eq tx-sender contract-caller) ERR_UNAUTHORIZED)
     (asserts! (is-eq (contract-of use-token) (get token-used quest)) ERR_WRONG_TOKEN)
     (asserts! (get amount-locked participant) ERR_AMOUNT_NOT_LOCKED)
-    (try! (as-contract? ((with-ft (contract-of use-token) "*" (get locked-amount participant)))
+    (try! (as-contract? ((with-ft (contract-of use-token) "*" (get locked-amount participant)) (with-stx (get locked-amount participant)))
       (begin
         (try! (restrict-assets? tx-sender
-          ((with-ft (contract-of use-token) "*" (get locked-amount participant)))
+          ((with-ft (contract-of use-token) "*" (get locked-amount participant)) (with-stx (get locked-amount participant)))
           (try! (contract-call? use-token transfer (get locked-amount participant)  tx-sender (get participant participant-key) none))
         ))
         true
@@ -236,7 +236,7 @@
 ;; Private functions
 
 (define-private (is-token-enabled (token-id principal))
-  (contract-call? 'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2 is-token-enabled token-id)
+  (contract-call? 'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v1 is-token-enabled token-id)
 )
 
 ;; Verify treasury contract hash (optional security check)

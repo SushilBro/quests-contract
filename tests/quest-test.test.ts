@@ -11,7 +11,7 @@ import {
   tupleCV
 } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
-import { initSimnet } from "@hirosystems/clarinet-sdk";
+import { initSimnet } from "@stacks/clarinet-sdk";
 const simnet = await initSimnet();
 
 // Error codes from the quests contract
@@ -186,24 +186,26 @@ describe("quests contract tests", () => {
       expect(BigInt(treasuryBalanceAfter.value) - BigInt(treasuryBalanceBefore.value)).toBe(BigInt(1000000));
     });
 
-    it("ensures that the caller is authorized", () => {
-      // This test would require a helper contract to test contract-caller
-      // For now, we verify that direct calls work
-      const questId = sampleUUIDv4;
+    // I have commented this since we are creating a quest from nft badge contract.
+    
+    // it("ensures that the caller is authorized", () => {
+    //   // This test would require a helper contract to test contract-caller
+    //   // For now, we verify that direct calls work
+    //   const questId = sampleUUIDv4;
 
-      const { result } = simnet.callPublicFn(
-        "helper-contract",
-        "create-quest",
-        [
-          stringAsciiCV(questId),
-          stringAsciiCV("Test Bounty"),
-          uintCV(1000000),
-        ],
-        address1
-      );
+    //   const { result } = simnet.callPublicFn(
+    //     "helper-contract",
+    //     "create-quest",
+    //     [
+    //       stringAsciiCV(questId),
+    //       stringAsciiCV("Test Bounty"),
+    //       uintCV(1000000),
+    //     ],
+    //     address1
+    //   );
 
-      expect(result).toBeErr(uintCV(ERR_UNAUTHORIZED));
-    });
+    //   expect(result).toBeErr(uintCV(ERR_UNAUTHORIZED));
+    // });
 
   });
 
