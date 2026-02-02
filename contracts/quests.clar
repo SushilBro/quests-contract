@@ -153,7 +153,7 @@
       (asserts! (is-eq (get status quest) QUEST_ACTIVE) ERR_QUEST_NOT_ACTIVE)
       (asserts! (is-eq (get token-used quest) (contract-of use-token)) ERR_WRONG_TOKEN)
       (try! (restrict-assets? tx-sender
-        ((with-ft (contract-of use-token) "*" u0))
+        ()
         (try! (contract-call? .treasury withdraw (get commitment-amount quest) tx-sender use-token))
       ))
       (ok (map-set quests quest-id (merge quest { status: QUEST_CANCELLED })))
