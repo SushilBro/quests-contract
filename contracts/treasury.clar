@@ -39,7 +39,7 @@
 
 ;; Deposit tokens into the treasury. Anyone can deposit; typically called
 ;; by the quests contract when a creator creates a quest.
-;; #[allow(unchecked_data)]
+
 (define-public (deposit
     (amount uint)
     (sender principal)
@@ -61,7 +61,7 @@
 
 ;; Withdraw tokens from the treasury. Only the quests contract can call
 ;; (e.g. when a quest creator cancels a quest).
-;; #[allow(unchecked_data)]
+
 (define-public (withdraw
     (amount uint)
     (recipient principal)
@@ -85,7 +85,7 @@
 ;; =============================================================================
 
 ;; Set the treasury owner. Only the current owner can call.
-;; #[allow(unchecked_data)]
+
 (define-public (set-treasury-owner (new-owner principal))
   (begin
     (asserts! (is-eq tx-sender contract-caller) ERR_UNAUTHORIZED)
@@ -101,7 +101,7 @@
 ;; Distribute rewards to a list of winners across multiple tokens.
 ;; Only treasury owner can call. For each token, 50% of balance is split
 ;; among winners; the rest remains as platform balance.
-;; #[allow(unchecked_data)]
+
 (define-public (reward-random-winners
     (winners (list 100 principal))
     (tokens (list 100 <token>))

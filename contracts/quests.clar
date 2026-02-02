@@ -83,7 +83,6 @@
 
 ;; Create a new quest. Creator locks commitment-amount in treasury.
 ;; Quest ID must be a 36-character string (e.g. UUID).
-;; #[allow(unchecked_data)]
 (define-public (create-quest
     (quest-id (string-ascii 36))
     (title (string-ascii 200))
@@ -118,7 +117,6 @@
 )
 
 ;; Join a quest by locking participation-amount. Only contract-caller can join.
-;; #[allow(unchecked_data)]
 (define-public (join-quest
     (quest-id (string-ascii 36))
     (participation-amount uint)
@@ -162,7 +160,6 @@
 
 ;; Record one activity completion. When all ACTIVITIES_PER_QUEST are done,
 ;; participant is auto-refunded their locked amount.
-;; #[allow(unchecked_data)]
 (define-public (complete-activity
     (quest-id (string-ascii 36))
     (use-token <token>)
@@ -223,7 +220,6 @@
 )
 
 ;; Cancel a quest (creator only). Creator gets commitment back from treasury.
-;; #[allow(unchecked_data)]
 (define-public (cancel-quest
     (quest-id (string-ascii 36))
     (use-token <token>)
@@ -288,7 +284,6 @@
 ;; =============================================================================
 
 ;; Set the contract owner. Only current owner can call.
-;; #[allow(unchecked_data)]
 (define-public (set-contract-owner (new-owner principal))
   (begin
     (asserts! (is-eq tx-sender contract-caller) ERR_UNAUTHORIZED)
