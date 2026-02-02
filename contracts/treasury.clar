@@ -33,11 +33,10 @@
     (token-contract <token>)
   )
   (let ((current-balance (default-to u0 (map-get? token-balances (contract-of token-contract)))))
-    (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     (asserts! (is-token-enabled (contract-of token-contract)) ERR_WRONG_TOKEN)
     (try! (restrict-assets? sender
       ((with-ft (contract-of token-contract) "*" amount) (with-stx amount))
-      (try! (contract-call? token-contract transfer amount sender (unwrap! (as-contract? () tx-sender) ERR_UNAUTHORIZED)
+      (try! (contract-call? token-contract transfer amount sender current-contract
         none
       ))
     ))
@@ -58,9 +57,7 @@
       (token-principal (contract-of token-contract))
       (current-balance (default-to u0 (map-get? token-balances token-principal)))
     )
-    (asserts! (is-eq contract-caller (unwrap! (as-contract? () .quests) ERR_UNAUTHORIZED)) ERR_UNAUTHORIZED)
-    (asserts! (> amount u0) ERR_INVALID_AMOUNT)
-    (asserts! (>= current-balance amount) ERR_INSUFFICIENT_BALANCE)
+    (asserts! (is-eq contract-caller .quests) ERR_UNAUTHORIZED)
     (asserts! (is-token-enabled token-principal) ERR_WRONG_TOKEN)
     ;; Transfer tokens from contract to recipient with asset restriction
     (try! (as-contract? ((with-ft token-principal "*" amount) (with-stx amount))
@@ -208,7 +205,7 @@
 
 (define-private (is-token-enabled (token-id principal))
   (contract-call?
-    'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v1
+    'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2
     is-token-enabled token-id
   )
 )

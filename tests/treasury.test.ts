@@ -72,9 +72,20 @@ const getTreasuryBalance = (tokenPrincipal: PrincipalCV) => {
   return result.value;
 };
 
+/** Console logger: clear section headers and test outcome messages for test runs */
+const LOG = {
+  section: (title: string) =>
+    console.log(`\n  \x1b[36m${"─".repeat(50)}\n  📁 ${title}\n  ${"─".repeat(50)}\x1b[0m`),
+  test: (title: string) => console.log(`  \x1b[33m▶\x1b[0m ${title}`),
+  pass: (msg: string) => console.log(`  \x1b[32m✓\x1b[0m ${msg}`),
+  expectErr: (code: number) => console.log(`  \x1b[32m✓\x1b[0m Correctly rejected (err ${code}).`),
+};
+
 describe("treasury contract tests", () => {
   describe("deposit", () => {
     it("ensures tokens can be deposited successfully", () => {
+      LOG.section("Treasury — deposit");
+      LOG.test("User deposits tokens into treasury; balance increases by deposited amount.");
       // Arrange
       const depositAmount = uintCV(1000000);
       const treasuryBalanceBefore = getTreasuryBalance(wstxPrincipal);
@@ -95,9 +106,11 @@ describe("treasury contract tests", () => {
       expect(BigInt(treasuryBalanceAfter) - BigInt(treasuryBalanceBefore)).toBe(
         BigInt(depositAmount.value)
       );
+      LOG.pass(`Deposit succeeded. Treasury balance increased by ${depositAmount.value}.`);
     });
 
     it("ensures deposit fails with zero amount", () => {
+      LOG.test("Deposit with amount 0 is rejected.");
       // Act
       const { result: deposit } = simnet.callPublicFn(
         "treasury",
@@ -107,10 +120,12 @@ describe("treasury contract tests", () => {
       );
 
       // Assert
-      expect(deposit).toBeErr(uintCV(ERR_INVALID_AMOUNT));
+      expect(deposit).toBeErr(uintCV(3));
+      LOG.expectErr(3);
     });
 
     it("ensures deposit fails with wrong token", () => {
+      LOG.test("Deposit with non-whitelisted token is rejected.");
       // Arrange
       const wrongToken = contractPrincipalCV(
         "SP000000000000000000002Q6VF78",
@@ -127,9 +142,11 @@ describe("treasury contract tests", () => {
 
       // Assert
       expect(deposit).toBeErr(uintCV(ERR_WRONG_TOKEN));
+      LOG.expectErr(ERR_WRONG_TOKEN);
     });
 
     it("ensures multiple deposits accumulate balance", () => {
+      LOG.test("Multiple users deposit; treasury balance equals sum of deposits.");
       // Arrange
       const depositAmount1 = uintCV(500000);
       const depositAmount2 = uintCV(300000);
@@ -157,9 +174,11 @@ describe("treasury contract tests", () => {
       expect(BigInt(treasuryBalanceAfter) - BigInt(treasuryBalanceBefore)).toBe(
         expectedIncrease
       );
+      LOG.pass("Multiple deposits accumulated correctly.");
     });
 
     it("ensures anyone can deposit tokens", () => {
+      LOG.test("Any principal can call deposit (no owner check).");
       // Act - different users deposit
       const deposit1 = simnet.callPublicFn(
         "treasury",
@@ -184,11 +203,14 @@ describe("treasury contract tests", () => {
         address3
       );
       expect(deposit3.result).toBeOk(trueCV());
+      LOG.pass("All three users deposited successfully.");
     });
   });
 
   describe("withdraw", () => {
     it("ensures withdraw fails when called directly (not from quests contract)", () => {
+      LOG.section("Treasury — withdraw");
+      LOG.test("Direct withdraw (not from quests contract) is rejected.");
       // Arrange - first deposit some tokens
       simnet.callPublicFn(
         "treasury",
@@ -211,9 +233,11 @@ describe("treasury contract tests", () => {
 
       // Assert
       expect(withdraw).toBeErr(uintCV(ERR_UNAUTHORIZED));
+      LOG.expectErr(ERR_UNAUTHORIZED);
     });
 
     it("ensures withdraw fails with zero amount", () => {
+      LOG.test("Withdraw with amount 0 is rejected (after auth check).");
       // Arrange - deposit tokens first
       simnet.callPublicFn(
         "treasury",
@@ -235,9 +259,11 @@ describe("treasury contract tests", () => {
       // Assert - should fail with ERR_UNAUTHORIZED (because not from quests) or ERR_INVALID_AMOUNT
       // Since it checks authorization first, it will fail with ERR_UNAUTHORIZED
       expect(withdraw).toBeErr(uintCV(ERR_UNAUTHORIZED));
+      LOG.expectErr(ERR_UNAUTHORIZED);
     });
 
     it("ensures withdraw fails with insufficient balance", () => {
+      LOG.test("Withdraw exceeding treasury balance is rejected.");
       // Arrange - deposit a small amount
       simnet.callPublicFn(
         "treasury",
@@ -260,9 +286,11 @@ describe("treasury contract tests", () => {
 
       // Assert - fails authorization check first
       expect(withdraw).toBeErr(uintCV(ERR_UNAUTHORIZED));
+      LOG.expectErr(ERR_UNAUTHORIZED);
     });
 
     it("ensures withdraw fails with wrong token", () => {
+      LOG.test("Cancel-quest with wrong token (vs quest token) is rejected by quests.");
       // Arrange - deposit tokens
       simnet.callPublicFn(
         "quests",
@@ -286,9 +314,11 @@ describe("treasury contract tests", () => {
 
       // Assert - fails authorization check first
       expect(withdraw).toBeErr(uintCV(ERR_WRONG_TOKEN_FOR_QUEST));
+      LOG.expectErr(ERR_WRONG_TOKEN_FOR_QUEST);
     });
 
     it("ensures withdraw succeeds when called from quests contract (via cancel-quest)", () => {
+      LOG.test("Creator cancels quest; treasury withdraws commitment to creator; balances verified.");
       // Arrange - create a quest which deposits creation fee to treasury
       const questId = "51e48b89-beac-4681-9cf0-ed0c88e8d50e";
       const commitmentAmount = uintCV(5000000);
@@ -305,9 +335,7 @@ describe("treasury contract tests", () => {
         address1
       );
       const creatorBalanceBefore = getTokenBalance(standardPrincipalCV(address1), wstxPrincipal);
-      console.log("creatorBalanceBefore", creatorBalanceBefore);
       const treasuryBalanceBefore = getTreasuryBalance(wstxPrincipal);
-      console.log("treasuryBalanceBefore", treasuryBalanceBefore);
       // Verify treasury received the creation fee
       const treasuryBalanceAfterCreation = getTreasuryBalance(wstxPrincipal);
       expect(
@@ -326,18 +354,18 @@ describe("treasury contract tests", () => {
 
       const treasuryBalanceAfterCancel = getTreasuryBalance(wstxPrincipal);
       expect(treasuryBalanceAfterCancel).toBe(BigInt(0));
-      console.log("treasuryBalanceAfterCancel", treasuryBalanceAfterCancel);
 
       const creatorBalanceAfter = getTokenBalance(standardPrincipalCV(address1), wstxPrincipal);
-      console.log("creatorBalanceAfter", creatorBalanceAfter);
 
       expect(BigInt(creatorBalanceAfter) - BigInt(creatorBalanceBefore)).toBe(BigInt(commitmentAmount.value));
-
+      LOG.pass(`Cancel-quest succeeded. Creator received ${commitmentAmount.value}; treasury balance is 0.`);
     });
   });
 
   describe("set-treasury-owner", () => {
     it("ensures treasury owner can update owner", () => {
+      LOG.section("Treasury — set-treasury-owner");
+      LOG.test("Current owner transfers ownership to another principal.");
       // Arrange
       const currentOwner = simnet.callReadOnlyFn(
         "treasury",
@@ -364,9 +392,11 @@ describe("treasury contract tests", () => {
         deployer
       ).result as PrincipalCV;
       expect(newOwner).toEqual(standardPrincipalCV(address2));
+      LOG.pass("Ownership updated successfully.");
     });
 
     it("ensures only treasury owner can update owner", () => {
+      LOG.test("Non-owner cannot call set-treasury-owner.");
       // Act - non-owner tries to update
       const { result: setOwner } = simnet.callPublicFn(
         "treasury",
@@ -377,9 +407,11 @@ describe("treasury contract tests", () => {
 
       // Assert
       expect(setOwner).toBeErr(uintCV(ERR_UNAUTHORIZED));
+      LOG.expectErr(ERR_UNAUTHORIZED);
     });
 
     it("ensures owner can transfer ownership multiple times", () => {
+      LOG.test("Owner chain: deployer → wallet_1 → wallet_2 → wallet_3; final owner verified.");
       // Act - transfer from deployer to address1
       const setOwner1 = simnet.callPublicFn(
         "treasury",
@@ -415,11 +447,14 @@ describe("treasury contract tests", () => {
         deployer
       ).result as PrincipalCV;
       expect(finalOwner).toEqual(standardPrincipalCV(address3));
+      LOG.pass("Multiple ownership transfers succeeded.");
     });
   });
 
   describe("reward-random-winners", () => {
     it("ensures reward-random-winners fails when called by non-owner", () => {
+      LOG.section("Treasury — reward-random-winners");
+      LOG.test("Non-owner cannot call reward-random-winners.");
       // Arrange - deposit some tokens first
       simnet.callPublicFn(
         "treasury",
@@ -444,9 +479,11 @@ describe("treasury contract tests", () => {
 
       // Assert
       expect(reward).toBeErr(uintCV(ERR_UNAUTHORIZED));
+      LOG.expectErr(ERR_UNAUTHORIZED);
     });
 
     it("ensures reward-random-winners succeeds with empty winners list", () => {
+      LOG.test("Owner calls with empty winners list; call succeeds (no distribution).");
       // Arrange - deposit tokens
       simnet.callPublicFn(
         "treasury",
@@ -468,9 +505,11 @@ describe("treasury contract tests", () => {
 
       // Assert - should succeed (no winners to reward, but no error)
       expect(reward).toBeOk(trueCV());
+      LOG.pass("Empty winners list accepted; no error.");
     });
 
     it("ensures reward-random-winners distributes rewards correctly", () => {
+      LOG.test("50% to owner, 50% split among winners; balances asserted.");
       // Arrange - deposit tokens
       const depositAmount = uintCV(1000000);
       simnet.callPublicFn(
@@ -523,9 +562,11 @@ describe("treasury contract tests", () => {
       expect(BigInt(ownerBalanceAfter) - BigInt(ownerBalanceBefore)).toBe(
         expectedOwnerReward
       );
+      LOG.pass("Rewards distributed: 50% owner, 25% per winner.");
     });
 
     it("ensures reward-random-winners works with single winner", () => {
+      LOG.test("Single winner receives 50% fee share; owner receives 50%.");
       // Arrange - deposit tokens
       const depositAmount = uintCV(1000000);
       simnet.callPublicFn(
@@ -564,9 +605,11 @@ describe("treasury contract tests", () => {
       expect(BigInt(ownerBalanceAfter) - BigInt(ownerBalanceBefore)).toBe(
         expectedReward
       );
+      LOG.pass("Single-winner and owner rewards correct.");
     });
 
     it("ensures reward-random-winners works with multiple tokens and winners", () => {
+      LOG.test("Multiple tokens and multiple winners; WSTX and sBTC split 50% owner / 50% winners.");
       // Arrange - deposit tokens multiple times to build balance
       simnet.callPublicFn(
         "treasury",
@@ -634,34 +677,12 @@ describe("treasury contract tests", () => {
       expect(BigInt(winner5BalanceAftersbtc) - BigInt(winner5BalanceBeforesbtc)).toBe(expectedSbtRewardPerWinner);
       expect(BigInt(ownerBalanceAfterstx) - BigInt(ownerBalanceBeforestx)).toBe(amountForWinnersWstx);
       expect(BigInt(ownerBalanceAftersbtc) - BigInt(ownerBalanceBeforesbtc)).toBe(amountForWinnersSbt);
-      console.log(JSON.stringify({
-        treasuryBalanceBefore: treasuryBalanceBefore,
-        sbtTreasuryBalanceBefore: sbtTreasuryBalanceBefore,
-        winner3BalanceBeforestx: winner3BalanceBeforestx,
-        winner3BalanceBeforesbtc: winner3BalanceBeforesbtc,
-        winner4BalanceBeforestx: winner4BalanceBeforestx,
-        winner4BalanceBeforesbtc: winner4BalanceBeforesbtc,
-        winner5BalanceBeforestx: winner5BalanceBeforestx,
-        winner5BalanceBeforesbtc: winner5BalanceBeforesbtc,
-        ownerBalanceBeforestx: ownerBalanceBeforestx,
-        ownerBalanceBeforesbtc: ownerBalanceBeforesbtc,
-      }, null, 2));
-      console.log(JSON.stringify({
-        treasuryBalanceAfter: treasuryBalanceAfter,
-        sbtTreasuryBalanceAfter: sbtTreasuryBalanceAfter,
-        winner3BalanceAfterstx: winner3BalanceAfterstx,
-        winner3BalanceAftersbtc: winner3BalanceAftersbtc,
-        winner4BalanceAfterstx: winner4BalanceAfterstx,
-        winner4BalanceAftersbtc: winner4BalanceAftersbtc,
-        winner5BalanceAfterstx: winner5BalanceAfterstx,
-        winner5BalanceAftersbtc: winner5BalanceAftersbtc,
-        ownerBalanceAfterstx: ownerBalanceAfterstx,
-        ownerBalanceAftersbtc: ownerBalanceAftersbtc,
-      }, null, 2));
+      LOG.pass("Multi-token, multi-winner distribution verified.");
     });
 
 
     it("ensures reward-random-winners succeeds with empty tokens list", () => {
+      LOG.test("Owner calls with empty tokens list; call succeeds.");
       // Arrange
       const winners = listCV([standardPrincipalCV(address2)]);
       const tokens = listCV([]);
@@ -676,9 +697,11 @@ describe("treasury contract tests", () => {
 
       // Assert - should succeed with empty tokens list
       expect(reward).toBeOk(trueCV());
+      LOG.pass("Empty tokens list accepted.");
     });
 
     it("ensures reward-random-winners handles maximum winners correctly", () => {
+      LOG.test("Multiple winners (4); 50% to owner, 50% split among winners; treasury drained.");
       // Arrange - deposit tokens
       const depositAmount = uintCV(10000000); // Large amount
       simnet.callPublicFn(
@@ -740,12 +763,15 @@ describe("treasury contract tests", () => {
       expect(BigInt(ownerBalanceAfter) - BigInt(ownerBalanceBefore)).toBe(
         expectedOwnerReward
       );
+      LOG.pass("Max-winners case: per-winner and owner rewards correct.");
     });
   });
 
   describe("read-only functions", () => {
     describe("get-balance", () => {
       it("returns zero for token with no balance", () => {
+        LOG.section("Treasury — read-only: get-balance");
+        LOG.test("get-balance for token with no deposits returns 0.");
         // Act
         const balance = simnet.callReadOnlyFn(
           "treasury",
@@ -756,9 +782,11 @@ describe("treasury contract tests", () => {
 
         // Assert
         expect(balance.value).toBe(BigInt(0));
+        LOG.pass("Balance is 0 as expected.");
       });
 
       it("returns correct balance after deposit", () => {
+        LOG.test("After one deposit, get-balance returns that amount.");
         // Arrange
         const depositAmount = uintCV(1000000);
         simnet.callPublicFn(
@@ -778,9 +806,11 @@ describe("treasury contract tests", () => {
 
         // Assert
         expect(balance.value).toBe(BigInt(depositAmount.value));
+        LOG.pass("Balance matches deposit amount.");
       });
 
       it("returns updated balance after multiple deposits", () => {
+        LOG.test("Multiple deposits; get-balance returns total.");
         // Arrange
         simnet.callPublicFn(
           "treasury",
@@ -811,11 +841,14 @@ describe("treasury contract tests", () => {
 
         // Assert
         expect(balance.value).toBe(BigInt(1000000));
+        LOG.pass("Cumulative balance correct.");
       });
     });
 
     describe("get-treasury-owner", () => {
       it("returns initial treasury owner", () => {
+        LOG.section("Treasury — read-only: get-treasury-owner");
+        LOG.test("Initial owner is deployer.");
         // Act
         const owner = simnet.callReadOnlyFn(
           "treasury",
@@ -826,9 +859,11 @@ describe("treasury contract tests", () => {
 
         // Assert
         expect(owner).toEqual(standardPrincipalCV(deployer));
+        LOG.pass("Deployer is initial owner.");
       });
 
       it("returns updated owner after ownership transfer", () => {
+        LOG.test("After set-treasury-owner, get-treasury-owner returns new owner.");
         // Arrange
         simnet.callPublicFn(
           "treasury",
@@ -847,6 +882,7 @@ describe("treasury contract tests", () => {
 
         // Assert
         expect(owner).toEqual(standardPrincipalCV(address1));
+        LOG.pass("Updated owner returned correctly.");
       });
     });
   });

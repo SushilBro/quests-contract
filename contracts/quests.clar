@@ -10,20 +10,12 @@
 (define-constant ERR_WRONG_TOKEN (err u1007)) ;; use it today
 (define-constant ERR_INVALID_ID (err u1008))
 (define-constant ERR_AMOUNT_NOT_LOCKED (err u1009))
-(define-constant ERR_INVALID_TOKEN_PRICE (err u1010))
-(define-constant ERR_INVALID_TOKEN_SYMBOL (err u1011))
-(define-constant ERR_INVALID_TOKEN_DECIMALS (err u1012))
-(define-constant ERR_INVALID_PARTICIPATION_AMOUNT (err u1013))
 (define-constant ERR_INVALID_COMMITMENT_AMOUNT (err u1014))
-(define-constant ERR_INVALID_TREASURY_CONTRACT (err u1015))
+
 ;; Quest status codes
 (define-constant QUEST_ACTIVE u1)
-(define-constant QUEST_COMPLETED u2)
-(define-constant QUEST_CANCELLED u3)
+(define-constant QUEST_CANCELLED u2)
 
-;; Activity status codes
-(define-constant ACTIVITY_INCOMPLETE u0)
-(define-constant ACTIVITY_COMPLETE u1)
 
 ;; Constants
 (define-constant ACTIVITIES_PER_QUEST u3)
@@ -78,7 +70,6 @@
       (asserts! (> commitment-amount u0) ERR_INVALID_COMMITMENT_AMOUNT)
       (asserts! (is-none (map-get? quests quest-id)) ERR_INVALID_QUEST)
       (asserts! (is-token-enabled (contract-of use-token)) ERR_WRONG_TOKEN)
-      (asserts! (verify-treasury-contract) ERR_INVALID_TREASURY_CONTRACT)
       (try! (restrict-assets? tx-sender 
         ((with-ft (contract-of use-token) "*" commitment-amount) (with-stx commitment-amount))
         (try! (contract-call? .treasury deposit commitment-amount tx-sender use-token))
@@ -97,11 +88,10 @@
       (asserts! (is-eq tx-sender contract-caller) ERR_UNAUTHORIZED)
       (asserts! (is-token-enabled (contract-of use-token)) ERR_WRONG_TOKEN)
       (asserts! (is-eq (get status quest) QUEST_ACTIVE) ERR_QUEST_NOT_ACTIVE)
-      (asserts! (> participation-amount u0) ERR_INVALID_PARTICIPATION_AMOUNT)
       (asserts! (is-none (map-get? participants participant-key)) ERR_ALREADY_PARTICIPATING)
       (try! (restrict-assets? tx-sender
         ((with-ft (contract-of use-token) "*" participation-amount) (with-stx participation-amount))
-        (try! (contract-call? use-token transfer participation-amount tx-sender (unwrap! (as-contract? () tx-sender) ERR_UNAUTHORIZED) none))
+        (try! (contract-call? use-token transfer participation-amount tx-sender current-contract none))
       ))
       (asserts! (map-insert participants participant-key {
         joined-block: burn-block-height,
@@ -162,7 +152,6 @@
       (asserts! (is-eq tx-sender (get creator quest)) ERR_UNAUTHORIZED)
       (asserts! (is-eq (get status quest) QUEST_ACTIVE) ERR_QUEST_NOT_ACTIVE)
       (asserts! (is-eq (get token-used quest) (contract-of use-token)) ERR_WRONG_TOKEN)
-      (asserts! (verify-treasury-contract) ERR_INVALID_TREASURY_CONTRACT)
       (try! (restrict-assets? tx-sender
         ((with-ft (contract-of use-token) "*" u0))
         (try! (contract-call? .treasury withdraw (get commitment-amount quest) tx-sender use-token))
@@ -238,17 +227,6 @@
 (define-private (is-token-enabled (token-id principal))
   (contract-call? 'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v1 is-token-enabled token-id)
 )
-
-;; Verify treasury contract hash (optional security check)
-;; This ensures the treasury contract exists and can be verified
-;; To add hash verification, compare against an expected hash constant
-(define-private (verify-treasury-contract)
-  (match (contract-hash? .treasury)
-    treasury-hash true
-    err-code false
-  )
-)
-
 
 ;; SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2
 ;; SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v1

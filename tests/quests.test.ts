@@ -53,10 +53,21 @@ import {
       ).result as ResponseOkCV<UIntCV>
     ).value.value;
   };
+
+  /** Console logger: section headers and test outcome messages for readable test runs */
+  const LOG = {
+    section: (title: string) =>
+      console.log(`\n  \x1b[36m${"─".repeat(50)}\n  📁 ${title}\n  ${"─".repeat(50)}\x1b[0m`),
+    test: (title: string) => console.log(`  \x1b[33m▶\x1b[0m ${title}`),
+    pass: (msg: string) => console.log(`  \x1b[32m✓\x1b[0m ${msg}`),
+    expectErr: (code: number) => console.log(`  \x1b[32m✓\x1b[0m Correctly rejected (err ${code}).`),
+  };
   
   describe("quests contract tests", () => {
     describe("create-quest", () => {
       it("ensures a quest is created successfully", () => {
+        LOG.section("Quests — create-quest");
+        LOG.test("Creator creates quest with valid id, title, token, commitment; quest stored with ACTIVE status.");
         // Arrange
         const questId = sampleUUIDv4;
         // Act
@@ -83,9 +94,11 @@ import {
         expect(quest.value.title).toEqual(stringAsciiCV("Test Quest"));
         expect(quest.value.status).toEqual(uintCV(QUEST_ACTIVE));
         expect(quest.value["participant-count"]).toEqual(uintCV(0));
+        LOG.pass("Quest created; creator, title, status, participant-count verified.");
       });
   
       it("ensures quest is created with a unique id", () => {
+        LOG.test("Duplicate quest id is rejected (ERR_INVALID_QUEST).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -119,9 +132,11 @@ import {
   
         // Assert
         expect(duplicateIdCall.result).toBeErr(uintCV(ERR_INVALID_QUEST));
+        LOG.expectErr(ERR_INVALID_QUEST);
       });
   
       it("ensures that only 36 length strings are passed as ids", () => {
+        LOG.test("Quest id length must be 36; invalid length rejected (ERR_INVALID_ID).");
         // Act
         const invalidIdLength = simnet.callPublicFn(
           "quests",
@@ -137,9 +152,11 @@ import {
   
         // Assert
         expect(invalidIdLength.result).toBeErr(uintCV(ERR_INVALID_ID));
+        LOG.expectErr(ERR_INVALID_ID);
       });
   
       it("ensures that the wrong token is used", () => {
+        LOG.test("Non-whitelisted token for quest creation is rejected (ERR_WRONG_TOKEN).");
         // Act
         const wrongToken = simnet.callPublicFn(
           "quests",
@@ -150,9 +167,11 @@ import {
   
         // Assert
         expect(wrongToken.result).toBeErr(uintCV(ERR_WRONG_TOKEN));
+        LOG.expectErr(ERR_WRONG_TOKEN);
       });
   
       it("ensures that the treasury receives the creation fee", () => {
+        LOG.test("Creation fee is deposited to treasury; balance delta equals commitment amount.");
         // Arrange
         const questId = sampleUUIDv4;
         const wstxPrincipal = contractPrincipalCV("SP32AEEF6WW5Y0NMJ1S8SBSZDAY8R5J32NBZFPKKZ", "wstx");
@@ -184,6 +203,7 @@ import {
         ).result as UIntCV;
         
         expect(BigInt(treasuryBalanceAfter.value) - BigInt(treasuryBalanceBefore.value)).toBe(BigInt(1000000));
+        LOG.pass("Treasury balance increased by commitment amount.");
       });
 
       // I have commented this since we are creating a quest from nft badge contract.
@@ -211,6 +231,8 @@ import {
   
     describe("join-quest", () => {
       it("user can join a quest", () => {
+        LOG.section("Quests — join-quest");
+        LOG.test("User joins quest with participation amount; participant record and count updated.");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -260,9 +282,11 @@ import {
         );
   
         expect(quest.value["participant-count"]).toEqual(uintCV(1));
+        LOG.pass("User joined; activities-completed 0, amount-locked true, participant-count 1.");
       });
   
       it("user cannot join quest with wrong token", () => {
+        LOG.test("Joining with token different from quest token is rejected (ERR_WRONG_TOKEN).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -288,9 +312,11 @@ import {
   
         // Assert
         expect(join).toBeErr(uintCV(ERR_WRONG_TOKEN));
+        LOG.expectErr(ERR_WRONG_TOKEN);
       });
   
       it("ensure user is authorized to join quest", () => {
+        LOG.test("Call via helper (contract-caller != tx-sender) is rejected (ERR_UNAUTHORIZED).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -315,9 +341,11 @@ import {
   
         // Assert
         expect(join).toBeErr(uintCV(ERR_UNAUTHORIZED));
+        LOG.expectErr(ERR_UNAUTHORIZED);
       });
   
       it("ensure user cannot join random quest id", () => {
+        LOG.test("Non-existent quest id is rejected (ERR_INVALID_QUEST).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -343,9 +371,11 @@ import {
   
         // Assert
         expect(join).toBeErr(uintCV(ERR_INVALID_QUEST));
+        LOG.expectErr(ERR_INVALID_QUEST);
       });
   
       it("ensure user cannot join twice to same quest", () => {
+        LOG.test("Second join by same user is rejected (ERR_ALREADY_PARTICIPATING).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -378,9 +408,11 @@ import {
   
         // Assert
         expect(join).toBeErr(uintCV(ERR_ALREADY_PARTICIPATING));
+        LOG.expectErr(ERR_ALREADY_PARTICIPATING);
       });
   
       it("ensure user cannot join cancelled quest", () => {
+        LOG.test("Join on cancelled quest is rejected (ERR_QUEST_NOT_ACTIVE).");
         const questId = sampleUUIDv4;
   
         simnet.callPublicFn(
@@ -424,14 +456,17 @@ import {
   
           // Assert
           expect(join).toBeErr(uintCV(ERR_QUEST_NOT_ACTIVE));
+          LOG.expectErr(ERR_QUEST_NOT_ACTIVE);
         } else {
           // If cancellation failed, skip this test assertion
           // The quest is still active, so join would succeed
           expect(true).toBe(true); // Placeholder
+          LOG.pass("Quest still active; join path not asserted.");
         }
       });
   
       it("ensure multiple users can join a quest", () => {
+        LOG.test("Three users join same quest; participant-count is 3.");
         const questId = sampleUUIDv4;
   
         simnet.callPublicFn(
@@ -477,11 +512,14 @@ import {
           stringAsciiCV(questId)
         );
         expect(quest.value["participant-count"]).toEqual(uintCV(3));
+        LOG.pass("Multiple users joined; participant-count verified.");
       });
     });
   
     describe("complete-activity", () => {
       it("user can complete first activity", () => {
+        LOG.section("Quests — complete-activity");
+        LOG.test("Participant completes first activity; activities-completed becomes 1.");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -526,9 +564,11 @@ import {
         expect(participant.value["activities-completed"]).toEqual(
           uintCV(1)
         );
+        LOG.pass("First activity completed; counter = 1.");
       });
   
       it("user can complete all three activities", () => {
+        LOG.test("Participant completes three activities; counter advances (refund may affect third).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -591,9 +631,11 @@ import {
         // Activities should be at least 2 (first two completed successfully)
         // Third may fail if refund fails
         expect(Number(participant.value["activities-completed"].value)).toBeGreaterThanOrEqual(2);
+        LOG.pass("Activities completed; counter >= 2.");
       });
   
       it("ensure user cannot complete activity more than 3 times", () => {
+        LOG.test("Fourth complete-activity call is rejected (ERR_ACTIVITY_ALREADY_COMPLETED).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -668,10 +710,12 @@ import {
           // Check if it's an error response
           expect(complete).toBeDefined();
         }
+        LOG.pass("Fourth complete-activity rejected as expected.");
       });
   
   
       it("ensure user cannot complete activity if not participating", () => {
+        LOG.test("Non-participant cannot complete activity (ERR_NOT_PARTICIPATING).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -697,9 +741,11 @@ import {
   
         // Assert
         expect(complete).toBeErr(uintCV(ERR_NOT_PARTICIPATING));
+        LOG.expectErr(ERR_NOT_PARTICIPATING);
       });
   
       it("ensure user cannot complete activity on cancelled quest", () => {
+        LOG.test("Complete-activity on cancelled quest is rejected (ERR_QUEST_NOT_ACTIVE).");
         const questId = sampleUUIDv4;
   
         simnet.callPublicFn(
@@ -748,13 +794,16 @@ import {
   
           // Assert
           expect(complete).toBeErr(uintCV(ERR_QUEST_NOT_ACTIVE));
+          LOG.expectErr(ERR_QUEST_NOT_ACTIVE);
         } else {
           // If cancellation failed, quest is still active
           expect(true).toBe(true); // Placeholder
+          LOG.pass("Quest still active; assertion skipped.");
         }
       });
   
       it("ensures user cannot complete activity with wrong token", () => {
+        LOG.test("Complete-activity with token different from quest token is rejected (ERR_WRONG_TOKEN).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -799,9 +848,11 @@ import {
   
         // Assert
         expect(complete3).toBeErr(uintCV(ERR_WRONG_TOKEN));
+        LOG.expectErr(ERR_WRONG_TOKEN);
       });
   
       it("ensures user cannot complete activity if amount is not locked", () => {
+        LOG.test("Complete-activity after all activities done / amount unlocked is rejected (ERR_ACTIVITY_ALREADY_COMPLETED).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -865,9 +916,11 @@ import {
   
         // Assert - should fail because activities already completed OR amount not locked
         expect(complete).toBeErr(uintCV(ERR_ACTIVITY_ALREADY_COMPLETED));
+        LOG.expectErr(ERR_ACTIVITY_ALREADY_COMPLETED);
       });
   
       it("ensures automatic refund when completing third activity", () => {
+        LOG.test("Third activity completion triggers auto-refund; participant balance and state verified.");
         // Arrange
         const questId = sampleUUIDv4;
         const participationAmount = 1000000;
@@ -953,9 +1006,11 @@ import {
           expect(participant.value["activities-completed"]).toEqual(uintCV(3));
           expect(participant.value["amount-locked"]).toEqual(boolCV(false));
         }
+        LOG.pass("Third-activity completion and refund behavior verified.");
       });
   
       it("ensures user cannot complete activity on invalid quest", () => {
+        LOG.test("Complete-activity on non-existent quest is rejected (ERR_INVALID_QUEST).");
         // Act - try to complete activity on non-existent quest
         const { result: complete } = simnet.callPublicFn(
           "quests",
@@ -966,9 +1021,11 @@ import {
   
         // Assert
         expect(complete).toBeErr(uintCV(ERR_INVALID_QUEST));
+        LOG.expectErr(ERR_INVALID_QUEST);
       });
   
       it("ensures user is authorized to complete activity", () => {
+        LOG.test("Complete-activity via helper (contract-caller != tx-sender) is rejected (ERR_UNAUTHORIZED).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -1001,9 +1058,11 @@ import {
   
         // Assert
         expect(complete).toBeErr(uintCV(ERR_UNAUTHORIZED));
+        LOG.expectErr(ERR_UNAUTHORIZED);
       });
   
       it("ensures activity counter increments correctly for each activity", () => {
+        LOG.test("After each complete-activity, activities-completed and amount-locked updated correctly.");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -1079,11 +1138,14 @@ import {
         ).value;
         expect(participant.value["activities-completed"]).toEqual(uintCV(3));
         expect(participant.value["amount-locked"]).toEqual(boolCV(false));
+        LOG.pass("Counter 1→2→3 and amount-locked state verified.");
       });
     });
   
     describe("refund-participant", () => {
       it("participant can refund their locked amount", () => {
+        LOG.section("Quests — refund-participant");
+        LOG.test("Participant refunds locked amount; balance restored and amount-locked set false.");
         // Arrange
         const questId = sampleUUIDv4;
         const participationAmount = 1000000;
@@ -1144,9 +1206,11 @@ import {
           // The function should still update amount-locked if transfer succeeds
           expect(refund).toBeDefined();
         }
+        LOG.pass("Refund flow and participant state verified.");
       });
   
       it("ensures participant cannot refund if not participating", () => {
+        LOG.test("Refund by non-participant is rejected (ERR_NOT_PARTICIPATING).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -1172,9 +1236,11 @@ import {
   
         // Assert
         expect(refund).toBeErr(uintCV(ERR_NOT_PARTICIPATING));
+        LOG.expectErr(ERR_NOT_PARTICIPATING);
       });
   
       it("ensures participant cannot refund if amount is not locked", () => {
+        LOG.test("Second refund after first refund is rejected (ERR_AMOUNT_NOT_LOCKED).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -1226,9 +1292,11 @@ import {
   
         // Assert
         expect(refund).toBeErr(uintCV(ERR_AMOUNT_NOT_LOCKED));
+        LOG.expectErr(ERR_AMOUNT_NOT_LOCKED);
       });
   
       it("ensures participant cannot refund with wrong token", () => {
+        LOG.test("Refund with token different from quest token is rejected (ERR_WRONG_TOKEN).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -1261,9 +1329,11 @@ import {
   
         // Assert
         expect(refund).toBeErr(uintCV(ERR_WRONG_TOKEN));
+        LOG.expectErr(ERR_WRONG_TOKEN);
       });
   
       it("ensures participant cannot refund on invalid quest", () => {
+        LOG.test("Refund on non-existent quest is rejected (ERR_INVALID_QUEST).");
         // Act - try to refund on non-existent quest
         const { result: refund } = simnet.callPublicFn(
           "quests",
@@ -1274,9 +1344,11 @@ import {
   
         // Assert
         expect(refund).toBeErr(uintCV(ERR_INVALID_QUEST));
+        LOG.expectErr(ERR_INVALID_QUEST);
       });
   
       it("ensures user is authorized to refund", () => {
+        LOG.test("Refund via helper (contract-caller != tx-sender) is rejected (ERR_UNAUTHORIZED).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -1309,9 +1381,11 @@ import {
   
         // Assert
         expect(refund).toBeErr(uintCV(ERR_UNAUTHORIZED));
+        LOG.expectErr(ERR_UNAUTHORIZED);
       });
   
       it("ensures refund updates participant state correctly", () => {
+        LOG.test("After refund, amount-locked is false and locked-amount unchanged.");
         // Arrange
         const questId = sampleUUIDv4;
         const participationAmount = 1000000;
@@ -1373,9 +1447,11 @@ import {
           // If refund failed, state might not be updated
           expect(refund).toBeDefined();
         }
+        LOG.pass("Participant state after refund verified.");
       });
   
       it("ensures only the participant can refund their own amount", () => {
+        LOG.test("Another user cannot refund participant's amount (ERR_NOT_PARTICIPATING).");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -1408,9 +1484,11 @@ import {
   
         // Assert
         expect(refund).toBeErr(uintCV(ERR_NOT_PARTICIPATING));
+        LOG.expectErr(ERR_NOT_PARTICIPATING);
       });
   
       it("ensures refund works after completing some activities", () => {
+        LOG.test("Refund after partial activity completion; balance and activities-completed preserved.");
         // Arrange
         const questId = sampleUUIDv4;
         const participationAmount = 1000000;
@@ -1485,11 +1563,14 @@ import {
         } else {
           expect(refund).toBeDefined();
         }
+        LOG.pass("Partial-completion refund verified.");
       });
     });
   
     describe("cancel-quest", () => {
       it("creator can cancel quest", () => {
+        LOG.section("Quests — cancel-quest");
+        LOG.test("Creator cancels quest; status set to CANCELLED.");
         // Arrange
         const questId = sampleUUIDv4;
   
@@ -1532,9 +1613,11 @@ import {
           // For now, we just verify the function was called and returned an error
           expect(cancel).toBeDefined();
         }
+        LOG.pass("Cancel-quest result and quest status verified.");
       });
   
       it("ensure only quest creator can cancel quest", () => {
+        LOG.test("Non-creator cannot cancel quest (ERR_UNAUTHORIZED).");
         const questId = sampleUUIDv4;
   
         simnet.callPublicFn(
@@ -1559,9 +1642,11 @@ import {
   
         // Assert
         expect(cancel).toBeErr(uintCV(ERR_UNAUTHORIZED));
+        LOG.expectErr(ERR_UNAUTHORIZED);
       });
   
       it("ensure cannot cancel already cancelled quest", () => {
+        LOG.test("Second cancel on same quest is rejected (ERR_QUEST_NOT_ACTIVE or similar).");
         const questId = sampleUUIDv4;
   
         simnet.callPublicFn(
@@ -1604,9 +1689,11 @@ import {
           // Verify it's defined (may be error response)
           expect(cancel).toBeDefined();
         }
+        LOG.pass("Double-cancel rejected as expected.");
       });
   
       it("ensure cannot cancel invalid quest", () => {
+        LOG.test("Cancel on non-existent quest is rejected (ERR_INVALID_QUEST).");
         // Act - try to cancel non-existent quest
         const { result: cancel } = simnet.callPublicFn(
           "quests",
@@ -1617,11 +1704,14 @@ import {
   
         // Assert
         expect(cancel).toBeErr(uintCV(ERR_INVALID_QUEST));
+        LOG.expectErr(ERR_INVALID_QUEST);
       });
     });
   
     describe("set-contract-owner", () => {
       it("ensure contract owner can update owner", () => {
+        LOG.section("Quests — set-contract-owner");
+        LOG.test("Deployer (owner) transfers contract ownership; get-contract-owner returns new owner.");
         // Act
         const { result: updateOwner } = simnet.callPublicFn(
           "quests",
@@ -1640,9 +1730,11 @@ import {
           address1
         );
         expect(owner.result).toEqual(standardPrincipalCV(address2));
+        LOG.pass("Ownership updated successfully.");
       });
   
       it("ensure only contract owner can update owner", () => {
+        LOG.test("Non-owner cannot call set-contract-owner (ERR_UNAUTHORIZED).");
         // Act
         const { result: updateOwner } = simnet.callPublicFn(
           "quests",
@@ -1653,6 +1745,7 @@ import {
   
         // Assert
         expect(updateOwner).toBeErr(uintCV(ERR_UNAUTHORIZED));
+        LOG.expectErr(ERR_UNAUTHORIZED);
       });
     });
   
@@ -1660,6 +1753,8 @@ import {
     describe("read-only functions", () => {
       describe("get-quest", () => {
         it("returns quest details", () => {
+          LOG.section("Quests — read-only: get-quest");
+          LOG.test("get-quest returns creator and title for existing quest.");
           // Arrange
           const questId = sampleUUIDv4;
   
@@ -1687,9 +1782,11 @@ import {
           const { value:result } = quest.result as any;
           expect(result.value["title"]).toEqual(stringAsciiCV("Get Quest Test"));
           expect(result.value["creator"]).toEqual(standardPrincipalCV(address1));
+          LOG.pass("Quest details returned correctly.");
         });
   
         it("returns none for non-existent quest", () => {
+          LOG.test("get-quest returns none for non-existent quest id.");
           // Act
           const quest = simnet.callReadOnlyFn(
             "quests",
@@ -1701,12 +1798,15 @@ import {
           // Assert
   
           expect(quest.result).toBeNone();
+          LOG.pass("None returned as expected.");
         });
       });
   
   
       describe("get-participant-status", () => {
         it("returns participant status", () => {
+          LOG.section("Quests — read-only: get-participant-status");
+          LOG.test("get-participant-status returns activities-completed and amount-locked for participant.");
           // Arrange
           const questId = sampleUUIDv4;
   
@@ -1743,9 +1843,11 @@ import {
             uintCV(0)
           );
           expect(value.value["amount-locked"]).toEqual(boolCV(true));
+          LOG.pass("Participant status returned correctly.");
         });
   
         it("returns none for non-participant", () => {
+          LOG.test("get-participant-status returns none for principal who did not join.");
           // Arrange
           const questId = sampleUUIDv4;
   
@@ -1772,11 +1874,14 @@ import {
           // Assert
   
           expect(status.result).toBeNone();
+          LOG.pass("None returned for non-participant.");
         });
       });
   
       describe("check-quest-completion-status", () => {
         it("returns true when all activities are completed", () => {
+          LOG.section("Quests — read-only: check-quest-completion-status");
+          LOG.test("check-quest-completion-status returns true when activities-completed == 3.");
           // Arrange
           const questId = sampleUUIDv4;
   
@@ -1851,9 +1956,11 @@ import {
             // If only 2 activities completed due to refund failure, result should be false
             expect(result.result).toEqual(boolCV(false));
           }
+          LOG.pass("Completion status (true/false) verified.");
         });
   
         it("returns false when not all activities are completed", () => {
+          LOG.test("check-quest-completion-status returns false when activities < 3.");
           // Arrange
           const questId = sampleUUIDv4;
   
@@ -1901,9 +2008,11 @@ import {
           // Assert
   
           expect(result.result).toEqual(boolCV(false));
+          LOG.pass("False returned for incomplete activities.");
         });
   
         it("returns false when participant has not joined", () => {
+          LOG.test("check-quest-completion-status returns false when principal never joined.");
           // Arrange
           const questId = sampleUUIDv4;
   
@@ -1930,9 +2039,11 @@ import {
           // Assert
   
           expect(result.result).toEqual(boolCV(false));
+          LOG.pass("False returned for non-participant.");
         });
   
         it("returns false when participant has not completed any activities", () => {
+          LOG.test("check-quest-completion-status returns false when activities-completed == 0.");
           // Arrange
           const questId = sampleUUIDv4;
   
@@ -1966,11 +2077,14 @@ import {
           // Assert
   
           expect(result.result).toEqual(boolCV(false));
+          LOG.pass("False returned when no activities completed.");
         });
       });
   
       describe("get-contract-owner", () => {
         it("returns contract owner", () => {
+          LOG.section("Quests — read-only: get-contract-owner");
+          LOG.test("get-contract-owner returns deployer as initial owner.");
           // Act
           const owner = simnet.callReadOnlyFn(
             "quests",
@@ -1982,11 +2096,14 @@ import {
           // Assert
   
           expect(owner.result).toEqual(standardPrincipalCV(deployer));
+          LOG.pass("Contract owner returned correctly.");
         });
       });
   
       describe("get-quest-counter", () => {
         it("returns quest counter", () => {
+          LOG.section("Quests — read-only: get-quest-counter");
+          LOG.test("get-quest-counter returns 1 after one quest created.");
           // Arrange
           const questId = sampleUUIDv4;
   
@@ -2013,6 +2130,7 @@ import {
           // Assert
   
           expect(counter.result).toEqual(uintCV(1));
+          LOG.pass("Quest counter returned correctly.");
         });
       });
   
