@@ -17,11 +17,8 @@ const simnet = await initSimnet();
 
 // Error codes from the treasury contract
 const ERR_UNAUTHORIZED = 2001;
-const ERR_INSUFFICIENT_BALANCE = 2002;
-const ERR_INVALID_AMOUNT = 2003;
-const ERR_WRONG_TOKEN = 2004;
+const ERR_WRONG_TOKEN = 2002;
 const ERR_WRONG_TOKEN_FOR_QUEST = 1007;
-const ERR_TRANSFER_INDEX_PREFIX = 1000;
 
 const accounts = simnet.getAccounts();
 const address1 = accounts.get("wallet_1")!;
