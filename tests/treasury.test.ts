@@ -677,6 +677,136 @@ describe("treasury contract tests", () => {
       LOG.pass("Multi-token, multi-winner distribution verified.");
     });
 
+    it("ensures reward-random-winners skips token when fee/winners rounds to zero (multiple tokens and winners)", () => {
+      LOG.test("One token small balance (fee/winners=0) skipped; other token distributed; multiple tokens and winners.");
+      // Token A (wstx): balance 5, 3 winners -> fee=2, 2/3=0 -> skip distribution, balance stays
+      simnet.callPublicFn(
+        "treasury",
+        "deposit",
+        [uintCV(5), standardPrincipalCV(address1), wstxToken],
+        address1
+      );
+      // Token B (sbtc): balance 900000, 3 winners -> fee=450000, 450000/3=150000 -> distribute
+      simnet.callPublicFn(
+        "treasury",
+        "deposit",
+        [uintCV(900000), standardPrincipalCV(address1), sbtToken],
+        address1
+      );
+
+      const winners = listCV([
+        standardPrincipalCV(address2),
+        standardPrincipalCV(address3),
+        standardPrincipalCV(address4),
+      ]);
+      const tokens = listCV([wstxToken, sbtToken]);
+
+      const wstxTreasuryBefore = getTreasuryBalance(wstxPrincipal);
+      const sbtTreasuryBefore = getTreasuryBalance(sbtToken);
+      const ownerWstxBefore = getTokenBalance(standardPrincipalCV(deployer), wstxPrincipal);
+      const ownerSbtBefore = getTokenBalance(standardPrincipalCV(deployer), sbtToken);
+      const winner2WstxBefore = getTokenBalance(standardPrincipalCV(address2), wstxPrincipal);
+      const winner2SbtBefore = getTokenBalance(standardPrincipalCV(address2), sbtToken);
+
+      const { result: reward } = simnet.callPublicFn(
+        "treasury",
+        "reward-random-winners",
+        [winners, tokens],
+        deployer
+      );
+
+      expect(reward).toBeOk(trueCV());
+
+      // WSTX: skipped (fee/winners = 0), balance unchanged in treasury, no transfers
+      const wstxTreasuryAfter = getTreasuryBalance(wstxPrincipal);
+      expect(BigInt(wstxTreasuryAfter)).toBe(BigInt(wstxTreasuryBefore));
+      expect(BigInt(wstxTreasuryAfter)).toBe(BigInt(5));
+
+      const ownerWstxAfter = getTokenBalance(standardPrincipalCV(deployer), wstxPrincipal);
+      expect(BigInt(ownerWstxAfter) - BigInt(ownerWstxBefore)).toBe(BigInt(0));
+
+      const winner2WstxAfter = getTokenBalance(standardPrincipalCV(address2), wstxPrincipal);
+      expect(BigInt(winner2WstxAfter) - BigInt(winner2WstxBefore)).toBe(BigInt(0));
+
+      // sBTC: distributed (fee=450000, 150000 per winner, 450000 to owner)
+      const sbtTreasuryAfter = getTreasuryBalance(sbtToken);
+      expect(BigInt(sbtTreasuryAfter)).toBe(BigInt(0));
+
+      const expectedSbtPerWinner = BigInt(450000) / BigInt(3); // 150000
+      const winner2SbtAfter = getTokenBalance(standardPrincipalCV(address2), sbtToken);
+      expect(BigInt(winner2SbtAfter) - BigInt(winner2SbtBefore)).toBe(expectedSbtPerWinner);
+
+      const ownerSbtAfter = getTokenBalance(standardPrincipalCV(deployer), sbtToken);
+      const expectedOwnerSbt = BigInt(450000); // 50% fee to owner
+      expect(BigInt(ownerSbtAfter) - BigInt(ownerSbtBefore)).toBe(expectedOwnerSbt);
+
+      // --- Log first distribution ---
+      console.log("\n  [1st distribution] WSTX: skipped (fee/winners=0). sBTC: distributed.");
+      console.log("    WSTX treasury after:", wstxTreasuryAfter.toString(), "| owner delta: 0 | winner delta: 0");
+      console.log("    sBTC treasury after:", sbtTreasuryAfter.toString(), "| owner +", expectedOwnerSbt.toString(), "| per winner +", expectedSbtPerWinner.toString());
+
+      // --- Second deposit: same amounts again ---
+      simnet.callPublicFn(
+        "treasury",
+        "deposit",
+        [uintCV(5), standardPrincipalCV(address1), wstxToken],
+        address1
+      );
+      simnet.callPublicFn(
+        "treasury",
+        "deposit",
+        [uintCV(900000), standardPrincipalCV(address1), sbtToken],
+        address1
+      );
+
+      const wstxTreasuryBefore2 = getTreasuryBalance(wstxPrincipal);
+      const sbtTreasuryBefore2 = getTreasuryBalance(sbtToken);
+      const ownerWstxBefore2 = getTokenBalance(standardPrincipalCV(deployer), wstxPrincipal);
+      const ownerSbtBefore2 = getTokenBalance(standardPrincipalCV(deployer), sbtToken);
+      const winner2WstxBefore2 = getTokenBalance(standardPrincipalCV(address2), wstxPrincipal);
+      const winner2SbtBefore2 = getTokenBalance(standardPrincipalCV(address2), sbtToken);
+
+      console.log("\n  [2nd deposit] Same amounts: +5 WSTX, +900000 sBTC");
+      console.log("    WSTX treasury before 2nd distribution:", wstxTreasuryBefore2.toString(), "(5 left + 5 new = 10)");
+      console.log("    sBTC treasury before 2nd distribution:", sbtTreasuryBefore2.toString());
+
+      const { result: reward2 } = simnet.callPublicFn(
+        "treasury",
+        "reward-random-winners",
+        [winners, tokens],
+        deployer
+      );
+
+      expect(reward2).toBeOk(trueCV());
+
+      // After 2nd distribution: WSTX balance 10 -> fee=5, 5/3=1 per winner; sBTC 900000 -> fee=450000, 150000 per winner
+      const wstxTreasuryAfter2 = getTreasuryBalance(wstxPrincipal);
+      const sbtTreasuryAfter2 = getTreasuryBalance(sbtToken);
+      const ownerWstxAfter2 = getTokenBalance(standardPrincipalCV(deployer), wstxPrincipal);
+      const ownerSbtAfter2 = getTokenBalance(standardPrincipalCV(deployer), sbtToken);
+      const winner2WstxAfter2 = getTokenBalance(standardPrincipalCV(address2), wstxPrincipal);
+      const winner2SbtAfter2 = getTokenBalance(standardPrincipalCV(address2), sbtToken);
+
+      const wstxOwnerDelta2 = BigInt(ownerWstxAfter2) - BigInt(ownerWstxBefore2);
+      const wstxWinnerDelta2 = BigInt(winner2WstxAfter2) - BigInt(winner2WstxBefore2);
+      const sbtOwnerDelta2 = BigInt(ownerSbtAfter2) - BigInt(ownerSbtBefore2);
+      const sbtWinnerDelta2 = BigInt(winner2SbtAfter2) - BigInt(winner2SbtBefore2);
+
+      expect(BigInt(wstxTreasuryAfter2)).toBe(BigInt(0));
+      expect(BigInt(sbtTreasuryAfter2)).toBe(BigInt(0));
+      // WSTX: Owner gets 5, winners get 5/3 = 1.66
+      expect(wstxWinnerDelta2).toBe(BigInt(1));
+      expect(wstxOwnerDelta2).toBe(BigInt(5));
+      expect(sbtWinnerDelta2).toBe(BigInt(150000));
+      expect(sbtOwnerDelta2).toBe(BigInt(450000));
+
+      console.log("\n  [2nd distribution] Both tokens distributed; treasury drained.");
+      console.log("    WSTX: treasury 0 | owner +", wstxOwnerDelta2.toString(), "| per winner +", wstxWinnerDelta2.toString());
+      console.log("    sBTC: treasury 0 | owner +", sbtOwnerDelta2.toString(), "| per winner +", sbtWinnerDelta2.toString());
+      console.log("    Totals: WSTX 10 = 3 (winners) + 7 (owner); sBTC 900000 = 450000 (winners) + 450000 (owner)\n");
+
+      LOG.pass("Small-balance token skipped; then re-deposit and re-distribute succeeds; multi-token multi-winner.");
+    });
 
     it("ensures reward-random-winners succeeds with empty tokens list", () => {
       LOG.test("Owner calls with empty tokens list; call succeeds.");

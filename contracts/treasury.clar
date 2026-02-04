@@ -127,6 +127,7 @@
 
 ;; Transfers tokens to a single winner. Used as fold step; accumulator
 ;; is (response { index, token-contract, amount } uint).
+;; #[allow(unchecked_data)]
 (define-private (transfer-to-winner
     (winner principal)
     (result (response {
@@ -165,6 +166,7 @@
 
 ;; Processes all winners for one token: splits 50% of token balance among
 ;; winners. Accumulator: (response { token-index, winners } uint).
+;; #[allow(unchecked_data)]
 (define-private (process-token-winners
     (token-contract <token>)
     (result (response {
@@ -188,27 +190,33 @@
           token-index: (+ token-index u1),
           winners: winners,
         })
-        (let ((amount-per-winner (/ fee winners-count)))
-          (match (fold transfer-to-winner winners
-            (ok {
-              index: u0,
-              token-contract: token-contract,
-              amount: amount-per-winner,
-            })
-          )
-            transfer-result (begin
-              (try! (as-contract? ((with-ft token-principal "*" fee) (with-stx fee))
-                (try! (contract-call? token-contract transfer fee tx-sender
-                  (var-get treasury-owner) none
-                ))
-              ))
-              (map-set token-balances token-principal (- balance balance))
+        (if (is-eq (/ fee winners-count) u0)
+          (ok {
+            token-index: (+ token-index u1),
+            winners: winners,
+          })
+          (let ((amount-per-winner (/ fee winners-count)))
+            (match (fold transfer-to-winner winners
               (ok {
-                token-index: (+ token-index u1),
-                winners: winners,
+                index: u0,
+                token-contract: token-contract,
+                amount: amount-per-winner,
               })
             )
-            err-transfer (err err-transfer)
+              transfer-result (begin
+                (try! (as-contract? ((with-ft token-principal "*" fee) (with-stx fee))
+                  (try! (contract-call? token-contract transfer fee tx-sender
+                    (var-get treasury-owner) none
+                  ))
+                ))
+                (map-set token-balances token-principal (- balance balance))
+                (ok {
+                  token-index: (+ token-index u1),
+                  winners: winners,
+                })
+              )
+              err-transfer (err err-transfer)
+            )
           )
         )
       )
@@ -234,6 +242,7 @@
 ;; =============================================================================
 
 ;; Checks token against whitelist (ZADAO-token-whitelist-v2).
+;; #[allow(unchecked_data)]
 (define-private (is-token-enabled (token-id principal))
   (contract-call?
     'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2
