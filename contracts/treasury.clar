@@ -245,7 +245,7 @@
 ;; #[allow(unchecked_data)]
 (define-private (is-token-enabled (token-id principal))
   (contract-call?
-    'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2
+    .ZADAO-token-whitelist-v2
     is-token-enabled token-id
   )
 )
