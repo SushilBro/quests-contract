@@ -33,6 +33,12 @@
   uint
 )
 
+;; principal -> true if allowed to call reward-random-winners (treasury-owner is always allowed)
+(define-map admins
+  principal
+  bool
+)
+
 ;; =============================================================================
 ;; PUBLIC FUNCTIONS - Deposits and withdrawals
 ;; =============================================================================
@@ -94,13 +100,31 @@
   )
 )
 
+;; Add a principal to the admin list. Only the treasury owner can call.
+(define-public (add-admin (admin principal))
+  (begin
+    (asserts! (is-eq tx-sender contract-caller) ERR_UNAUTHORIZED)
+    (asserts! (is-eq tx-sender (var-get treasury-owner)) ERR_UNAUTHORIZED)
+    (ok (map-set admins admin true))
+  )
+)
+
+;; Remove a principal from the admin list. Only the treasury owner can call.
+(define-public (remove-admin (admin principal))
+  (begin
+    (asserts! (is-eq tx-sender contract-caller) ERR_UNAUTHORIZED)
+    (asserts! (is-eq tx-sender (var-get treasury-owner)) ERR_UNAUTHORIZED)
+    (ok (map-delete admins admin))
+  )
+)
+
 ;; =============================================================================
 ;; PUBLIC FUNCTIONS - Rewards
 ;; =============================================================================
 
 ;; Distribute rewards to a list of winners across multiple tokens.
-;; Only treasury owner can call. For each token, 50% of balance is split
-;; among winners; the rest remains as platform balance.
+;; Treasury owner or any principal in the admin list can call. For each token,
+;; 50% of balance is split among winners; the rest remains as platform balance.
 
 (define-public (reward-random-winners
     (winners (list 100 principal))
@@ -108,7 +132,13 @@
   )
   (begin
     (asserts! (is-eq tx-sender contract-caller) ERR_UNAUTHORIZED)
-    (asserts! (is-eq tx-sender (var-get treasury-owner)) ERR_UNAUTHORIZED)
+    (asserts!
+      (or
+        (is-eq tx-sender (var-get treasury-owner))
+        (is-some (map-get? admins tx-sender))
+      )
+      ERR_UNAUTHORIZED
+    )
     (match (fold process-token-winners tokens
       (ok {
         token-index: u0,
@@ -237,6 +267,10 @@
   (var-get treasury-owner)
 )
 
+(define-read-only (is-admin (who principal))
+  (is-some (map-get? admins who))
+)
+
 ;; =============================================================================
 ;; PRIVATE HELPERS - Token validation
 ;; =============================================================================
@@ -245,7 +279,7 @@
 ;; #[allow(unchecked_data)]
 (define-private (is-token-enabled (token-id principal))
   (contract-call?
-    .ZADAO-token-whitelist-v2
+    'SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2
     is-token-enabled token-id
   )
 )

@@ -448,6 +448,73 @@ describe("treasury contract tests", () => {
     });
   });
 
+  describe("add-admin, remove-admin, is-admin", () => {
+    it("ensures treasury owner can add and remove admins", () => {
+      LOG.section("Treasury — add-admin, remove-admin, is-admin");
+      LOG.test("Owner adds admin; is-admin returns true; owner removes admin; is-admin returns false.");
+      // Act - owner adds address1 as admin
+      const addResult = simnet.callPublicFn(
+        "treasury",
+        "add-admin",
+        [standardPrincipalCV(address1)],
+        deployer
+      );
+      expect(addResult.result).toBeOk(trueCV());
+
+      const isAdminAfterAdd = simnet.callReadOnlyFn(
+        "treasury",
+        "is-admin",
+        [standardPrincipalCV(address1)],
+        deployer
+      ).result;
+      expect(isAdminAfterAdd).toEqual(trueCV());
+      LOG.pass("Admin added; is-admin(address1) is true.");
+
+      // Owner removes admin
+      const removeResult = simnet.callPublicFn(
+        "treasury",
+        "remove-admin",
+        [standardPrincipalCV(address1)],
+        deployer
+      );
+      expect(removeResult.result).toBeOk(trueCV());
+
+      const isAdminAfterRemove = simnet.callReadOnlyFn(
+        "treasury",
+        "is-admin",
+        [standardPrincipalCV(address1)],
+        deployer
+      ).result;
+      expect(isAdminAfterRemove).toEqual(boolCV(false));
+      LOG.pass("Admin removed; is-admin(address1) is false.");
+    });
+
+    it("ensures only treasury owner can call add-admin", () => {
+      LOG.test("Non-owner cannot call add-admin.");
+      const { result } = simnet.callPublicFn(
+        "treasury",
+        "add-admin",
+        [standardPrincipalCV(address2)],
+        address1
+      );
+      expect(result).toBeErr(uintCV(ERR_UNAUTHORIZED));
+      LOG.expectErr(ERR_UNAUTHORIZED);
+    });
+
+    it("ensures only treasury owner can call remove-admin", () => {
+      LOG.test("Non-owner cannot call remove-admin.");
+      simnet.callPublicFn("treasury", "add-admin", [standardPrincipalCV(address2)], deployer);
+      const { result } = simnet.callPublicFn(
+        "treasury",
+        "remove-admin",
+        [standardPrincipalCV(address2)],
+        address1
+      );
+      expect(result).toBeErr(uintCV(ERR_UNAUTHORIZED));
+      LOG.expectErr(ERR_UNAUTHORIZED);
+    });
+  });
+
   describe("reward-random-winners", () => {
     it("ensures reward-random-winners fails when called by non-owner", () => {
       LOG.section("Treasury — reward-random-winners");
@@ -477,6 +544,26 @@ describe("treasury contract tests", () => {
       // Assert
       expect(reward).toBeErr(uintCV(ERR_UNAUTHORIZED));
       LOG.expectErr(ERR_UNAUTHORIZED);
+    });
+
+    it("ensures reward-random-winners succeeds when called by admin", () => {
+      LOG.test("Admin (not owner) can call reward-random-winners.");
+      simnet.callPublicFn(
+        "treasury",
+        "add-admin",
+        [standardPrincipalCV(address1)],
+        deployer
+      );
+      const winners = listCV([]);
+      const tokens = listCV([]);
+      const { result: reward } = simnet.callPublicFn(
+        "treasury",
+        "reward-random-winners",
+        [winners, tokens],
+        address1
+      );
+      expect(reward).toBeOk(trueCV());
+      LOG.pass("Admin called reward-random-winners successfully.");
     });
 
     it("ensures reward-random-winners succeeds with empty winners list", () => {

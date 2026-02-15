@@ -1,0 +1,110 @@
+---
+id: 0
+name: Testnet deployment
+network: testnet
+stacks-node: "https://api.testnet.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - requirement-publish:
+            contract-id: SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard
+            remap-sender: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            remap-principals:
+              SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            cost: 8400
+            path: ".\\.cache/requirements/SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.clar"
+            clarity-version: 1
+      epoch: "2.0"
+    - id: 1
+      transactions:
+        - requirement-publish:
+            contract-id: SP32AEEF6WW5Y0NMJ1S8SBSZDAY8R5J32NBZFPKKZ.wstx
+            remap-sender: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            remap-principals:
+              SP32AEEF6WW5Y0NMJ1S8SBSZDAY8R5J32NBZFPKKZ: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            cost: 7310
+            path: ".\\.cache/requirements/SP32AEEF6WW5Y0NMJ1S8SBSZDAY8R5J32NBZFPKKZ.wstx.clar"
+            clarity-version: 1
+      epoch: "2.05"
+    - id: 2
+      transactions:
+        - requirement-publish:
+            contract-id: SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v1
+            remap-sender: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            remap-principals:
+              SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            cost: 32260
+            path: ".\\.cache/requirements/SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v1.clar"
+            clarity-version: 2
+      epoch: "2.5"
+    - id: 3
+      transactions:
+        - requirement-publish:
+            contract-id: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-registry
+            remap-sender: ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT
+            remap-principals:
+              SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4: ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT
+            cost: 112090
+            path: ".\\.cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-registry.clar"
+            clarity-version: 3
+        - requirement-publish:
+            contract-id: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+            remap-sender: ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT
+            remap-principals:
+              SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4: ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT
+            cost: 47590
+            path: ".\\.cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token.clar"
+            clarity-version: 3
+        - requirement-publish:
+            contract-id: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-deposit
+            remap-sender: ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT
+            remap-principals:
+              SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4: ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT
+            cost: 41510
+            path: ".\\.cache/requirements/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-deposit.clar"
+            clarity-version: 3
+      epoch: "3.0"
+    - id: 4
+      transactions:
+        - requirement-publish:
+            contract-id: SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2
+            remap-sender: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            remap-principals:
+              SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            cost: 53450
+            path: ".\\.cache/requirements/SP2GW18TVQR75W1VT53HYGBRGKFRV5BFYNAF5SS5J.ZADAO-token-whitelist-v2.clar"
+            clarity-version: 3
+      epoch: "3.1"
+    - id: 5
+      transactions:
+        - contract-publish:
+            contract-name: treasury
+            expected-sender: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            cost: 2110218
+            path: contracts/treasury.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: quests
+            expected-sender: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            cost: 2116653
+            path: contracts/quests.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: helper-contract
+            expected-sender: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            cost: 2096592
+            path: contracts/helper-contract.clar
+            anchor-block-only: true
+            clarity-version: 4
+        - contract-publish:
+            contract-name: quest-test
+            expected-sender: ST1APRYRM9EV1KR73X2TRZCE8FZGFEF0YP3J1MNE1
+            cost: 2112489
+            path: contracts/quest-test.clar
+            anchor-block-only: true
+            clarity-version: 4
+      epoch: "3.3"
